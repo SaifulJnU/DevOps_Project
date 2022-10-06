@@ -1,6 +1,5 @@
 FROM  centos:latest
 MAINTAINER saiful2561998@gmail.com
-
 RUN yum install -y net-tools
 RUN yum -y update
 RUN yum install -y httpd \
