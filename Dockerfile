@@ -1,5 +1,13 @@
 FROM  centos:latest
 MAINTAINER vikashashoke@gmail.com
+RUN yum upgrade -y && \
+    yum updateinfo -y && \
+    yum install -y \
+      ca-certificates \
+      && \
+    yum clean all && \
+    update-ca-trust enable && \
+    update-ca-trust extract
 RUN yum install -y httpd \
  zip\
  unzip
