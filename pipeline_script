@@ -1,0 +1,77 @@
+node{
+    stage('Git checkout')
+    {
+        git 'https://github.com/SaifulJnU/minikubernetes_Project.git'
+    }
+    stage("Sending Dockerfile to ansible server over the ssh")
+    {
+        sshagent(['ansible-demo']) {
+        // some block
+           
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186'
+                sh 'scp /var/lib/jenkins/workspace/pipeline-demo/* ubuntu@172.31.11.186:/home/ubuntu/'
+
+        }
+        
+    }
+    stage('Build docker image')
+    {
+         sshagent(['ansible-demo']) {
+        // some block
+           
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 cd /home/ubuntu/'
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image build -t $JOB_NAME:v1.$BUILD_ID . --no-cache'
+         }
+    }
+    
+    stage('Docker image tagging')
+    {
+         sshagent(['ansible-demo']) {
+        // some block
+           
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 cd /home/ubuntu/'
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image tag $JOB_NAME:v1.$BUILD_ID saiful321/$JOB_NAME:v1.$BUILD_ID'
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image tag $JOB_NAME:v1.$BUILD_ID saiful321/$JOB_NAME:latest'
+    }
+    
+   }
+   
+   stage('Push docker image to docker-hub')
+    {
+         sshagent(['ansible-demo']) 
+         {
+            withCredentials([string(credentialsId: 'dockerhub-passwd', variable: 'dockerHubPasswd')]) {
+                 
+                sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker login -u saiful321 -p ${dockerHubPasswd}"
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image push saiful321/$JOB_NAME:v1.$BUILD_ID'
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image push saiful321/$JOB_NAME:latest'
+                sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 sudo docker image rm saiful321/$JOB_NAME:v1.$BUILD_ID saiful321/$JOB_NAME:latest $JOB_NAME:v1.$BUILD_ID'
+                 
+            }
+    
+          }
+    }
+    
+    stage('Copy files from ansible to kubernetes server')
+    {
+        sshagent(['kubernetes']) {
+            //172.31.42.50
+              sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.42.50'
+              sh 'scp /var/lib/jenkins/workspace/pipeline-demo/* ubuntu@172.31.42.50:/home/ubuntu/'
+   
+       }
+    }
+    // stage('Kubernetes Deployment using ansible')
+    // {
+    //     sshagent(['ansible-demo']) {
+    //          sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 cd /home/ubuntu/'
+    //           sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.186 ansible-playbook ansible.yml'
+             
+    
+    //   }
+    // }
+    
+    
+    
+    
+}
